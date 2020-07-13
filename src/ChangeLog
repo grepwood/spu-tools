@@ -1,3 +1,10 @@
+2008-12-09 Andre Detsch <adetsch at br.ibm.com>
+	* ctx-info.c: Handle chdir return code, to avoid trying to access
+	tid, phys-id and stat files in the wrong location.
+
+2008-09-02 Andre Detsch <adetsch@br.ibm.com>
+	* ctx-info.c: Enhanced PID retrieval.
+
 2008-07-04 Andre Detsch <adetsch@br.ibm.com>
 	* ctx-info.c: Support for spu threads with arbitrary spufs entry names.
 

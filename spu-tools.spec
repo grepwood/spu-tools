@@ -1,7 +1,7 @@
 Summary: user space tools for Cell/B.E.
 Name: spu-tools
 Version: 1.1
-Release: 5
+Release: 6
 License: GPL
 Group: Applications/System
 Source0: spu-tools.tar.bz2
@@ -42,6 +42,9 @@ rm -rf $RPM_BUILD_ROOT
 %dir /%{_prefix}/share/man/man1/spu-ps.1.gz
 
 %changelog
+* Tue Sep 02 2008  Andre Detsch <adetsch@br.ibm.com> 1.1-6
+- Enhanced PID retrieval.
+
 * Fri Jul 04 2008  Andre Detsch <adetsch@br.ibm.com> 1.1-5
 - Support for spu threads with arbitrary spufs entry names.
 

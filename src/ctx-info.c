@@ -291,13 +291,23 @@ static struct ctx *ctxs_get_ctx(int thread_id)
 	return NULL;
 }
 
-static int find_thread_pid(int thread_id)
+static int get_thread_pid(int thread_id, const char* entry_name)
 {
 	DIR* proc_dir;
 	struct dirent *entry;
 	static char buf[PATH_MAX];
-	int pid = -1;
+	unsigned long long ctx_id;
+	int pid = -1, pid_entry = -1;
 
+	/* Try to get PID from the spufs entry name */
+	if (sscanf(entry_name, "spethread-%d-%llu", &pid_entry, &ctx_id) == 2) {
+		/* Check if the TID belongs to the given PID in procfs */
+		sprintf(buf, "%s/%d/task/%d", PROCFS_PATH, pid_entry, thread_id);
+		if (access(buf, F_OK) == 0)
+			return pid_entry;
+	}
+
+	/* If PID was not found yet, try to find it in procfs */
 	proc_dir = opendir(PROCFS_PATH);
 	if (proc_dir) {
 		while ((entry = readdir(proc_dir)) != NULL) {
@@ -309,7 +319,13 @@ static int find_thread_pid(int thread_id)
 		}
 		closedir(proc_dir);
 	}
-	return pid;
+	if (pid != -1)
+		return pid;
+
+	/* If no PID was found, use the one given by the entry name, even
+	 * if it can't be verified in procfs
+	 */
+	return pid_entry;
 }
 
 static int
@@ -324,7 +340,9 @@ process_ctx_entry(struct dirent *entry, const char *gang_name, u64 last_period)
 		sprintf(buf, "%s/%s/%s", SPUFS_PATH, gang_name, entry->d_name);
 	else
 		sprintf(buf, "%s/%s", SPUFS_PATH, entry->d_name);
-	chdir(buf);
+
+	if (chdir(buf))
+		return 0;
 
 	fp = fopen("tid", "r");
 	if (fp) {
@@ -340,9 +358,8 @@ process_ctx_entry(struct dirent *entry, const char *gang_name, u64 last_period)
 		ctx = alloc_ctx();
 		ctxs[ctxs_n] = ctx;
 		ctxs_n++;
-
 		ctx->thread_id = thread_id;
-		ctx->ppu_pid = find_thread_pid(thread_id);
+		ctx->ppu_pid = get_thread_pid(thread_id, entry->d_name);
 	}
 
 	sprintf(buf, "%s/%d/stat", PROCFS_PATH, ctx->ppu_pid);
@@ -352,8 +369,6 @@ process_ctx_entry(struct dirent *entry, const char *gang_name, u64 last_period)
 		buf[strlen(buf)-1] = '\0';         /* Remove trailing ')'*/
 		ctx->binary_name = strdup(buf+1);  /* Skip initial '('   */
 		fclose(fp);
-	} else {
-		return 0;
 	}
 
 	sprintf(buf, "%s/%d/status", PROCFS_PATH, ctx->ppu_pid);
